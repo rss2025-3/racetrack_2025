@@ -55,13 +55,6 @@ def line_segmentation(img):
 	# Apply ROI mask to the thresholded image
 	roi_result = cv2.bitwise_and(mask, roi_mask)
 
-	# Display ROI overlaid on original image
-	roi_display = img.copy()
-	overlay = np.zeros_like(img)
-	overlay[roi_mask > 0] = [0, 255, 0]  # Green overlay
-	roi_display = cv2.addWeighted(roi_display, 1, overlay, 0.3, 0)
-
-	# Edge Detection & Hough Transform
 	# Use Canny edge detection on the ROI result.
 	edges = cv2.Canny(roi_result, 50, 150)
 
