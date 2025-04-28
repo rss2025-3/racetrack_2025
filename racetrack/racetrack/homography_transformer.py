@@ -78,11 +78,11 @@ class HomographyTransformer(Node):
         # CHANGE!!!
         output = np.mean(transformed_points, axis=0)
 
-        #Publish relative xy position of object in real world
+        # Publish relative xy position of object in real world
         lookahead_point_msg = Point32()
-        lookahead_point_msg.x = output[0]
-        lookahead_point_msg.y = output[1]
-        lookahead_point_msg.z = 0
+        lookahead_point_msg.x = float(output[0])
+        lookahead_point_msg.y = float(output[1])
+        lookahead_point_msg.z = 0.0
 
 
         self.cone_pub.publish(lookahead_point_msg)

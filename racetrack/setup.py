@@ -26,7 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'racetrack_controller = racetrack.racetrack_controller:main',
-            'line_detector = racetrack.cone_detector:main',
+            'line_detector = racetrack.line_detector:main',
             'cone_sim_marker = racetrack.cone_sim_marker:main',
             'homography_transformer = racetrack.homography_transformer:main',
         ],

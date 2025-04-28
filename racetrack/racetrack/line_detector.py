@@ -11,11 +11,7 @@ from sensor_msgs.msg import Image
 from geometry_msgs.msg import Point32, Polygon #geometry_msgs not in CMake file
 
 # import your color segmentation algorithm; call this function in ros_image_callback!
-<<<<<<< HEAD
-from racetrack.racetrack.computer_vision.line_segmentation import cd_color_segmentation
-=======
-from computer_vision.color_segmentation import line_segmentation
->>>>>>> 386787a (fixed ros nodes)
+from computer_vision.line_segmentation import line_segmentation
 
 
 class LineDetector(Node):
@@ -31,26 +27,32 @@ class LineDetector(Node):
 
     def image_callback(self, image_msg):
         image = self.bridge.imgmsg_to_cv2(image_msg, "bgr8")
-        lines = [[1, 12, 34, 56], [156, 561, 23 ,55]] # [[x1 y1 x2 y2]]
-        # lines = line_segmentation(image, None)
+        # lines = [[1, 12, 34, 56], [156, 561, 23 ,55]] # [[x1 y1 x2 y2]]
+        lines = line_segmentation(image)
 
-        debug_msg = self.bridge.cv2_to_imgmsg(image, "bgr8")
-        self.debug_pub.publish(debug_msg)
+
+        
         line_pixel_msg = Polygon()
         for l in lines:
+            line = l[0]
             first_point = Point32()
-            first_point.x = l[0]
-            first_point.y = l[1]
-            first_point.z = 0
+            first_point.x = float(line[0])
+            first_point.y = float(line[1])
+            first_point.z = 0.0
 
             second_point = Point32()
-            second_point.x = l[2]
-            second_point.y = l[3]
-            second_point.z = 0
+            second_point.x = float(line[2])
+            second_point.y = float(line[3])
+            second_point.z = 0.0
 
             line_pixel_msg.points.append(first_point)
             line_pixel_msg.points.append(second_point)
-            
+
+            # Draw a line from (0, 0) to (511, 511) with blue color and thickness of 5
+            cv2.line(image, (line[0], line[1]), (line[2], line[3]), (255, 0, 0), 5)
+        
+        debug_msg = self.bridge.cv2_to_imgmsg(image, "bgr8")
+        self.debug_pub.publish(debug_msg)
         self.line_pub.publish(line_pixel_msg)
 
 def main(args=None):
