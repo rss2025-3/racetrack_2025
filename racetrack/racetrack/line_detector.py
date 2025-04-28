@@ -8,70 +8,55 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import Point #geometry_msgs not in CMake file
-from vs_msgs.msg import ConeLocationPixel
+from geometry_msgs.msg import Point32, Polygon #geometry_msgs not in CMake file
 
 # import your color segmentation algorithm; call this function in ros_image_callback!
+<<<<<<< HEAD
 from racetrack.racetrack.computer_vision.line_segmentation import cd_color_segmentation
+=======
+from computer_vision.color_segmentation import line_segmentation
+>>>>>>> 386787a (fixed ros nodes)
 
 
-class ConeDetector(Node):
-    """
-    A class for applying your cone detection algorithms to the real robot.
-    Subscribes to: /zed/zed_node/rgb/image_rect_color (Image) : the live RGB image from the onboard ZED camera.
-    Publishes to: /relative_cone_px (ConeLocationPixel) : the coordinates of the cone in the image frame (units are pixels).
-    """
+class LineDetector(Node):
     def __init__(self):
-        super().__init__("cone_detector")
-        # toggle line follower vs cone parker
-        self.LineFollower = False
-
+        super().__init__("line_detector")
         # Subscribe to ZED camera RGB frames
-        self.cone_pub = self.create_publisher(ConeLocationPixel, "/relative_cone_px", 10)
-        self.debug_pub = self.create_publisher(Image, "/cone_debug_img", 10)
+        self.line_pub  = self.create_publisher(Polygon, "/lines_px", 10)
+        self.debug_pub = self.create_publisher(Image, "/line_debug_img", 10)
         self.image_sub = self.create_subscription(Image, "/zed/zed_node/rgb/image_rect_color", self.image_callback, 5)
         self.bridge = CvBridge() # Converts between ROS images and OpenCV Images
 
-        self.get_logger().info("Cone Detector Initialized")
+        self.get_logger().info("Line Detector Initialized")
 
     def image_callback(self, image_msg):
-        # Apply your imported color segmentation function (cd_color_segmentation) to the image msg here
-        # From your bounding box, take the center pixel on the bottom
-        # (We know this pixel corresponds to a point on the ground plane)
-        # publish this pixel (u, v) to the /relative_cone_px topic; the homography transformer will
-        # convert it to the car frame.
-
-        #################################
-        # YOUR CODE HERE
-        # detect the cone and publish its
-        # pixel location in the image.
-        # vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        #################################
-
         image = self.bridge.imgmsg_to_cv2(image_msg, "bgr8")
-	
-        b_box, length = cd_color_segmentation(image, None)
-        
-        self.get_logger().info(f'{length=}')
-        
-        x = float(abs(b_box[1][0]+b_box[0][0])/2)
-        #y = float(abs(b_box[1][1]+b_box[0][1])/2)
-        y = float(b_box[1][1])
+        lines = [[1, 12, 34, 56], [156, 561, 23 ,55]] # [[x1 y1 x2 y2]]
+        # lines = line_segmentation(image, None)
 
         debug_msg = self.bridge.cv2_to_imgmsg(image, "bgr8")
         self.debug_pub.publish(debug_msg)
-        pixel_msg = ConeLocationPixel()
-        pixel_msg.u = x
-        pixel_msg.v = y
-        #self.get_logger().info(f"{b_box=}")
-        self.get_logger().info(f"pixel y {y}")
+        line_pixel_msg = Polygon()
+        for l in lines:
+            first_point = Point32()
+            first_point.x = l[0]
+            first_point.y = l[1]
+            first_point.z = 0
 
-        self.cone_pub.publish(pixel_msg)
+            second_point = Point32()
+            second_point.x = l[2]
+            second_point.y = l[3]
+            second_point.z = 0
+
+            line_pixel_msg.points.append(first_point)
+            line_pixel_msg.points.append(second_point)
+            
+        self.line_pub.publish(line_pixel_msg)
 
 def main(args=None):
     rclpy.init(args=args)
-    cone_detector = ConeDetector()
-    rclpy.spin(cone_detector)
+    line_detector = LineDetector()
+    rclpy.spin(line_detector)
     rclpy.shutdown()
 
 if __name__ == '__main__':

@@ -11,7 +11,8 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from ackermann_msgs.msg import AckermannDriveStamped
 from visualization_msgs.msg import Marker
-from vs_msgs.msg import ConeLocation, ConeLocationPixel
+from geometry_msgs.msg import Point32, Polygon #geometry_msgs not in CMake file
+
 
 #The following collection of pixel locations and corresponding relative
 #ground plane locations are used to compute our homography matrix
@@ -45,9 +46,10 @@ class HomographyTransformer(Node):
     def __init__(self):
         super().__init__("homography_transformer")
 
-        self.cone_pub = self.create_publisher(ConeLocation, "/relative_cone", 10)
+        self.cone_pub = self.create_publisher(Point32, "/lookahead_point", 10)
+        self.cone_px_sub = self.create_subscription(Polygon, "/lines_px", self.cone_detection_callback, 1)
+
         self.marker_pub = self.create_publisher(Marker, "/cone_marker", 1)
-        self.cone_px_sub = self.create_subscription(ConeLocationPixel, "/relative_cone_px", self.cone_detection_callback, 1)
 
         if not len(PTS_GROUND_PLANE) == len(PTS_IMAGE_PLANE):
             rclpy.logerr("ERROR: PTS_GROUND_PLANE and PTS_IMAGE_PLANE should be of same length")
@@ -68,18 +70,22 @@ class HomographyTransformer(Node):
 
     def cone_detection_callback(self, msg):
         #Extract information from message
-        u = msg.u
-        v = msg.v
-
-        #Call to main function
-        x, y = self.transformUvToXy(u, v)
+        transformed_points = []
+        for p in msg.points:
+            transformed_points.append(self.transformUvToXy(p.x, p.y))
+        transformed_points = np.array(transformed_points)
+        
+        # CHANGE!!!
+        output = np.mean(transformed_points, axis=0)
 
         #Publish relative xy position of object in real world
-        relative_xy_msg = ConeLocation()
-        relative_xy_msg.x_pos = x
-        relative_xy_msg.y_pos = y
+        lookahead_point_msg = Point32()
+        lookahead_point_msg.x = output[0]
+        lookahead_point_msg.y = output[1]
+        lookahead_point_msg.z = 0
 
-        self.cone_pub.publish(relative_xy_msg)
+
+        self.cone_pub.publish(lookahead_point_msg)
 
 
     def transformUvToXy(self, u, v):
@@ -101,7 +107,7 @@ class HomographyTransformer(Node):
         homogeneous_xy = xy * scaling_factor
         x = homogeneous_xy[0, 0]
         y = homogeneous_xy[1, 0]
-        return x, y
+        return [x, y]
 
     def draw_marker(self, cone_x, cone_y, message_frame):
         """
