@@ -4,7 +4,7 @@ import csv
 import ast
 import sys
 from sift_template import cd_sift_ransac, cd_template_matching
-from color_segmentation import cd_color_segmentation
+from racetrack.racetrack.computer_vision.line_segmentation import cd_color_segmentation
 
 # File paths
 cone_csv_path = "./test_images_cone/test_images_cone.csv"
