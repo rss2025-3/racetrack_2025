@@ -91,14 +91,13 @@ def line_to_line_distance(line1, line2):
         point_to_line_distance(p4, p1, p2)
     ]
     return min(distances)
-
 def select_lane_lines(regression_lines, angle_filter=-15):
     """
     Select the two lines that form the lane boundaries on either side of the vertical center line.
-    Returns the left and right lane boundary lines.
+    Returns the left and right lane boundary lines, along with their homography transformed coordinates.
     """
     if len(regression_lines) < 2:
-        return None, None
+        return None, None, None, None
         
     # Transform lines to bird's eye view coordinates
     transformed_lines = []
@@ -126,7 +125,7 @@ def select_lane_lines(regression_lines, angle_filter=-15):
             filtered_lines.append(line)
     
     if len(filtered_lines) < 2:
-        return None, None
+        return None, None, None, None
     
     # Find lines on either side of center (x=0)
     left_lines = []
@@ -139,15 +138,16 @@ def select_lane_lines(regression_lines, angle_filter=-15):
         else:
             right_lines.append((i, abs(y1)))
     
-    #print(f"Left lines: {left_lines}, right lines: {right_lines}")
-            
     left_idx = min(left_lines, key=lambda x: x[1])[0] if left_lines else None
     right_idx = min(right_lines, key=lambda x: x[1])[0] if right_lines else None
     
     left_line = filtered_lines[left_idx] if left_idx is not None else None
     right_line = filtered_lines[right_idx] if right_idx is not None else None
     
-    return left_line, right_line
+    left_transformed = transformed_lines[left_idx] if left_idx is not None else None
+    right_transformed = transformed_lines[right_idx] if right_idx is not None else None
+    
+    return left_line, right_line, left_transformed, right_transformed
 
 def cluster_lines(lines, distance_threshold=100, angle_threshold=10):
     if lines is None or len(lines) == 0:
