@@ -20,6 +20,9 @@ class LineDetector(Node):
         # Subscribe to ZED camera RGB frames
         self.line_pub  = self.create_publisher(Polygon, "/lines_px", 10)
         self.debug_pub = self.create_publisher(Image, "/line_debug_img", 10)
+        self.lookahead_pub = self.create_publisher(Point32, "/lookahead_point", 10)
+        
+        
         self.image_sub = self.create_subscription(Image, "/zed/zed_node/rgb/image_rect_color", self.image_callback, 5)
         self.bridge = CvBridge() # Converts between ROS images and OpenCV Images
 
@@ -29,31 +32,46 @@ class LineDetector(Node):
         image = self.bridge.imgmsg_to_cv2(image_msg, "bgr8")
         # lines = [[1, 12, 34, 56], [156, 561, 23 ,55]] # [[x1 y1 x2 y2]]
         lines = line_segmentation(image)
-
-
-        
         line_pixel_msg = Polygon()
-        for l in lines:
-            line = l[0]
-            first_point = Point32()
-            first_point.x = float(line[0])
-            first_point.y = float(line[1])
-            first_point.z = 0.0
+        transformed_lines = []
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+        color = 0
+        if lines is not None:
+            for l in lines:
+                # publish lines for rosbag
+                line = l
+                first_point = Point32()
+                first_point.x = float(line[0])
+                first_point.y = float(line[1])
+                first_point.z = 0.0
 
-            second_point = Point32()
-            second_point.x = float(line[2])
-            second_point.y = float(line[3])
-            second_point.z = 0.0
+                second_point = Point32()
+                second_point.x = float(line[2])
+                second_point.y = float(line[3])
+                second_point.z = 0.0
 
-            line_pixel_msg.points.append(first_point)
-            line_pixel_msg.points.append(second_point)
+                line_pixel_msg.points.append(first_point)
+                line_pixel_msg.points.append(second_point)
 
-            # Draw a line from (0, 0) to (511, 511) with blue color and thickness of 5
-            cv2.line(image, (line[0], line[1]), (line[2], line[3]), (255, 0, 0), 5)
-        
-        debug_msg = self.bridge.cv2_to_imgmsg(image, "bgr8")
-        self.debug_pub.publish(debug_msg)
-        self.line_pub.publish(line_pixel_msg)
+                # Draw a line from (0, 0) to (511, 511) with blue color and thickness of 5
+                cv2.line(image, (line[0], line[1]), (line[2], line[3]), colors[color % len(colors)], 5)
+                color = color + 1
+
+                # homography transform
+                new_line = []
+                # new_line.extend(transformUvToXy(line[0], line[1]))
+                # new_line.extend(transformUvToXy(line[2], line[3]))
+                transformed_lines.append(new_line)
+
+            debug_msg = self.bridge.cv2_to_imgmsg(image, "bgr8")
+            self.debug_pub.publish(debug_msg)
+            self.line_pub.publish(line_pixel_msg)
+
+            # Publish relative xy position of object in real world
+            lookahead_point_msg = Point32()
+            lookahead_point_msg.x = float(1)
+            lookahead_point_msg.y = float(0)
+            lookahead_point_msg.z = 0.0
 
 def main(args=None):
     rclpy.init(args=args)
