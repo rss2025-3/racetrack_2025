@@ -77,6 +77,7 @@ class LineDetector(Node):
                 lookahead_point_msg.x = lookahead_x
                 lookahead_point_msg.y = lookahead_y
                 lookahead_point_msg.z = 0.0
+                self.lookahead_pub.publish(lookahead_point_msg)
 
 def main(args=None):
     rclpy.init(args=args)
