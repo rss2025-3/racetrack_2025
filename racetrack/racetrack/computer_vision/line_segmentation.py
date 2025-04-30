@@ -283,8 +283,8 @@ def line_segmentation(img):
 			)
 		
 		# Get lane boundary lines
-		left_line, right_line = select_lane_lines(regression_lines)
+		left_line, right_line, left_homograpy_line, right_homography_line = select_lane_lines(regression_lines)
 
-		return left_line, right_line
+		return left_line, right_line, left_homograpy_line, right_homography_line
 	else:
 		None
