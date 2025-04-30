@@ -13,6 +13,50 @@ import numpy as np
 #  v
 ###############################################################
 
+PTS_IMAGE_PLANE = [[483, 210],
+                   [244, 206],
+                   [173, 249],
+                   [584, 286]]
+
+PTS_GROUND_PLANE = [[39, -13],
+                    [39, 13],
+                    [23, 13],
+                    [23, -13]]
+
+METERS_PER_INCH = 0.0254
+
+np_pts_ground = np.array(PTS_GROUND_PLANE)
+np_pts_ground = np_pts_ground * METERS_PER_INCH
+np_pts_ground = np.float32(np_pts_ground[:, np.newaxis, :])
+
+np_pts_image = np.array(PTS_IMAGE_PLANE)
+np_pts_image = np_pts_image * 1.0
+np_pts_image = np.float32(np_pts_image[:, np.newaxis, :])
+
+# To this:
+h, _ = cv2.findHomography(np_pts_image, np_pts_ground)
+
+def transformUvToXy(u, v):
+    """
+    u and v are pixel coordinates.
+    The top left pixel is the origin, u axis increases to right, and v axis
+    increases down.
+
+    Returns a normal non-np 1x2 matrix of xy displacement vector from the
+    camera to the point on the ground plane.
+    Camera points along positive x axis and y axis increases to the left of
+    the camera.
+
+    Units are in meters.
+    """
+    homogeneous_point = np.array([[u], [v], [1]])
+    xy = np.dot(h, homogeneous_point)
+    scaling_factor = 1.0 / xy[2, 0]
+    homogeneous_xy = xy * scaling_factor
+    x = homogeneous_xy[0, 0]
+    y = homogeneous_xy[1, 0]
+    return x, y
+
 def image_print(img):
 	"""
 	Helper function to print out images, for debugging. Pass them in as a list.
@@ -21,8 +65,6 @@ def image_print(img):
 	cv2.imshow("image", img)
 	cv2.waitKey(0)
 	cv2.destroyAllWindows()
-
-
 
 def point_to_line_distance(point, line_start, line_end):
     line_vec = line_end - line_start
@@ -50,6 +92,62 @@ def line_to_line_distance(line1, line2):
     ]
     return min(distances)
 
+def select_lane_lines(regression_lines, angle_filter=-15):
+    """
+    Select the two lines that form the lane boundaries on either side of the vertical center line.
+    Returns the left and right lane boundary lines.
+    """
+    if len(regression_lines) < 2:
+        return None, None
+        
+    # Transform lines to bird's eye view coordinates
+    transformed_lines = []
+    filtered_lines = []
+    for line in regression_lines:
+        x1, y1, x2, y2 = line
+
+        # Transform both points
+        p1_t = transformUvToXy(x1, y1)
+        p2_t = transformUvToXy(x2, y2)
+        
+        # Ensure x1 is the minimum x coordinate
+        if p2_t[0] < p1_t[0]:
+            x1_t, y1_t = p2_t
+            x2_t, y2_t = p1_t
+        else:
+            x1_t, y1_t = p1_t
+            x2_t, y2_t = p2_t
+        
+        # Calculate angle after transform
+        angle = np.arctan2(y2_t - y1_t, x2_t - x1_t) * 180 / np.pi
+
+        if angle > angle_filter:
+            transformed_lines.append(((x1_t, y1_t), (x2_t, y2_t)))
+            filtered_lines.append(line)
+    
+    if len(filtered_lines) < 2:
+        return None, None
+    
+    # Find lines on either side of center (x=0)
+    left_lines = []
+    right_lines = []
+    
+    for i, ((x1, y1), _) in enumerate(transformed_lines):
+        print(f"{x1}, {y1}")
+        if y1 < 0:
+            left_lines.append((i, abs(y1)))
+        else:
+            right_lines.append((i, abs(y1)))
+    
+    #print(f"Left lines: {left_lines}, right lines: {right_lines}")
+            
+    left_idx = min(left_lines, key=lambda x: x[1])[0] if left_lines else None
+    right_idx = min(right_lines, key=lambda x: x[1])[0] if right_lines else None
+    
+    left_line = filtered_lines[left_idx] if left_idx is not None else None
+    right_line = filtered_lines[right_idx] if right_idx is not None else None
+    
+    return left_line, right_line
 
 def cluster_lines(lines, distance_threshold=100, angle_threshold=10):
     if lines is None or len(lines) == 0:
@@ -184,7 +282,9 @@ def line_segmentation(img):
 			angle_threshold=10,
 			)
 		
-		return regression_lines
+		# Get lane boundary lines
+		left_line, right_line = select_lane_lines(regression_lines)
 
-	return lines
-
+		return left_line, right_line
+	else:
+		None
