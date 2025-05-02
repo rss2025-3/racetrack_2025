@@ -18,10 +18,14 @@ PTS_IMAGE_PLANE = [[483, 210],
                    [173, 249],
                    [584, 286]]
 
+#PTS_IMAGE_PLANE = [[21, 246], [364, 249], [348, 194], [522, 194]]
+
 PTS_GROUND_PLANE = [[39, -13],
                     [39, 13],
                     [23, 13],
                     [23, -13]]
+
+#PTS_GROUND_PLANE = [[24, 24], [24, 0], [48, 0], [48, -24]]
 
 METERS_PER_INCH = 0.0254
 
@@ -96,7 +100,7 @@ def select_lane_lines(regression_lines, angle_filter=-15):
     Select the two lines that form the lane boundaries on either side of the vertical center line.
     Returns the left and right lane boundary lines, along with their homography transformed coordinates.
     """
-    if len(regression_lines) < 2:
+    if len(regression_lines) < 1:
         return None, None, None, None
         
     # Transform lines to bird's eye view coordinates
@@ -120,11 +124,11 @@ def select_lane_lines(regression_lines, angle_filter=-15):
         # Calculate angle after transform
         angle = np.arctan2(y2_t - y1_t, x2_t - x1_t) * 180 / np.pi
 
-        if angle > angle_filter:
+        if (angle > angle_filter) and (angle < 60):
             transformed_lines.append(((x1_t, y1_t), (x2_t, y2_t)))
             filtered_lines.append(line)
     
-    if len(filtered_lines) < 2:
+    if len(filtered_lines) < 1:
         return None, None, None, None
     
     # Find lines on either side of center (x=0)
@@ -132,7 +136,7 @@ def select_lane_lines(regression_lines, angle_filter=-15):
     right_lines = []
     
     for i, ((x1, y1), _) in enumerate(transformed_lines):
-        print(f"{x1}, {y1}")
+        #print(f"{x1}, {y1}")
         if y1 < 0:
             left_lines.append((i, abs(y1)))
         else:
@@ -287,4 +291,4 @@ def line_segmentation(img):
 
 		return left_line, right_line, left_homograpy_line, right_homography_line
 	else:
-		None
+		return None, None, None, None

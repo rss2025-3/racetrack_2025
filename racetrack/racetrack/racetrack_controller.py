@@ -31,16 +31,16 @@ class RacetrackController(Node):
         self.relative_x = 0
         self.relative_y = 0
 
-        self.L = 0.1
-        self.L_ah = 0.33
-        self.speed = 1.0
+        self.L = 0.33
+        self.L_ah = 4.0
+        self.speed = 4.0
         self.backwards = False
 
         self.get_logger().info("Parking Controller Initialized")
 
     def lookahead_point_callback(self, msg):
         self.relative_x = msg.x
-        self.relative_y = msg.y
+        self.relative_y = msg.y - 0.1 # for old algorithm - 0.4
         self.get_logger().info(f"relative x {self.relative_x}")
         self.get_logger().info(f"relative y {self.relative_y}")
         eta = math.atan(self.relative_y / self.relative_x)
