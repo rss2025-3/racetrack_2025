@@ -113,14 +113,16 @@ class LineDetector(Node):
 
                 # STRATEGY 3
                 I = self.intersection(left_line, right_line)
-                B = self.bisector_endpoint_int(I, (right_line[0], right_line[1]), (left_line[0], left_line[1]), 50)
-                # cv2.circle(image, (int(I[0]), int(I[1])), 10, (0,0,255), -1)
-                # cv2.line(image, (int(I[0]),int(I[1])), (int(B[0]),int(B[1])), (0,0,255), 2)
-                cv2.circle(image, (int(B[0]), int(B[1])), 10, (0,0,255), -1)
-                lookahead_x, lookahead_y = transformUvToXy(B[0], B[1])
+                if I != (0, 0):
+                    B = self.bisector_endpoint_int(I, (right_line[0], right_line[1]), (left_line[0], left_line[1]), 50)
+                    # cv2.circle(image, (int(I[0]), int(I[1])), 10, (0,0,255), -1)
+                    # cv2.line(image, (int(I[0]),int(I[1])), (int(B[0]),int(B[1])), (0,0,255), 2)
+                    cv2.circle(image, (int(B[0]), int(B[1])), 10, (0,0,255), -1)
+                    lookahead_x, lookahead_y = transformUvToXy(B[0], B[1])
                 # MIDPOINT
                 # lookahead_x, lookahead_y = transformUvToXy(I[0], I[1])
-                
+                else:
+                    lookahead_x, lookahead_y = (0, 0)
                 lookahead_point_msg = Point32()
                 lookahead_point_msg.x = float(lookahead_x)
                 lookahead_point_msg.y = float(lookahead_y)
@@ -148,7 +150,8 @@ class LineDetector(Node):
         a2, b2, c2 =  y4-y3,  x3-x4,  x4*y3 - x3*y4
         denom = a1*b2 - a2*b1
         if abs(denom) < 1e-8:
-            raise ValueError("Lines are parallel or coincident – no unique intersection.")
+            return (0, 0)
+            #raise ValueError("Lines are parallel or coincident – no unique intersection.")
         xi = (b1*c2 - b2*c1) / denom
         yi = (c1*a2 - c2*a1) / denom
         # I = np.array([xi, yi], dtype=float)
